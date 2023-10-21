@@ -2,16 +2,19 @@ package data_access;
 
 import entity.User;
 import entity.UserFactory;
+import use_case.clear_users.ClearUserDataAccessInterface;
 import use_case.login.LoginUserDataAccessInterface;
 import use_case.signup.SignupUserDataAccessInterface;
 
 import java.io.*;
+import java.sql.Array;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class FileUserDataAccessObject implements SignupUserDataAccessInterface, LoginUserDataAccessInterface {
+public class FileUserDataAccessObject implements SignupUserDataAccessInterface, LoginUserDataAccessInterface, ClearUserDataAccessInterface {
 
     private final File csvFile;
 
@@ -94,6 +97,36 @@ public class FileUserDataAccessObject implements SignupUserDataAccessInterface, 
     @Override
     public boolean existsByName(String identifier) {
         return accounts.containsKey(identifier);
+    }
+
+    public ArrayList<String> deleteAllUsers(){
+
+        ArrayList<String> names = new ArrayList<String>();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
+            String header = reader.readLine();
+
+            // For later: clean this up by creating a new Exception subclass and handling it in the UI.
+            assert header.equals("username,password,creation_time");
+
+            String row;
+            while ((row = reader.readLine()) != null) {
+                String[] col = row.split(",");
+                String username = String.valueOf(col[headers.get("username")]);
+                names.add(username);
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        boolean deleted = csvFile.delete();
+        if (deleted){
+            accounts.clear();
+            return names;
+        } else {
+            throw new RuntimeException("Could not delete file");
+        }
     }
 
 }
